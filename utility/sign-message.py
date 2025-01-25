@@ -43,7 +43,7 @@ def sign_message(private_key_ec: str, message: str) -> str:
         str: The signature in base64.
     """
     try:
-        # Decode and remove the recovery ID (first byte)
+        # Decode to bytes
         private_key_byte = bytes.fromhex(private_key_ec)
 
         # Init the SigningKey Object from bytes string
