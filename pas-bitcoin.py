@@ -17,67 +17,58 @@ AUTH_NULL = True
 RETAIN_PASSWORD = True
 
 def post_auth(authcred, attributes, authret, info):
-    
-    # No authentication needed for admins
-    if authcred["username"] == "openvpn": 
-        authret["conn_group"] = "admins" # Assign user to VPN_USERS group
-        authret["client_reason"] = ("You are an admin")
-        authret["reason"] = "Admin has access"
-        authret["status"] = SUCCEED
-        return authret
-
-    # Set the bitcoin network (regtest) for bitcoin rpc interaction
-    SelectParams(BITCOIN_NETWORK)
-    # Init proxy for rpc call to the bitcoin server
-    proxy = Proxy()
-
-    try:
-        # Unload Bitcoin wallet of the user
-        proxy.call("unloadwallet", USER_WALLET_NAME)
-        #print(f"Wallet loaded: successfully")
-    except JSONRPCError as e: 
-        # Don't throw an error is the wallet is already loaded
-        if e.error["code"] == WALLET_ALREADY_UNLOADED_ERROR_CODE: 
-            print("User wallet unloaded successfully")
-        else:
-            print("Unloading user wallet failed")
-            print(e)
-
-    try:
-        # Load Bitcoin wallet of the VPN
-        proxy.call("loadwallet", VPN_WALLET_NAME)
-        #print(f"Wallet loaded: successfully")
-    except JSONRPCError as e: 
-        # Don't throw an error is the wallet is already loaded
-        if e.error["code"] == WALLET_ALREADY_LOADED_ERROR_CODE: 
-            print("VPN wallet loaded successfully")
-        else:
-            print("Loading VPN wallet failed")
-            print(e)
-
-    try:
-        # Get a new bitcoin address where the vpn's user can pay
-        to_pay_btc_address = proxy.getnewaddress()
-    except JSONRPCError as e:
-        print("Retrieving new address failed.")
-        print(e)
-
-    try:
-        # Get all transaction ids
-        transaction_ids = scan_transactions(proxy)
-    except JSONRPCError as e:
-        print("Scanning transaction failed")
-        print(e)
-
-    sender_pub_keys = []
-    # Extract sender's public keys
-    for tx_id in transaction_ids:
-        pub_key = get_public_key(proxy, tx_id)
-        sender_pub_keys.append(pub_key)
 
     # Check if this is a VPN authentication session
     if attributes.get("vpn_auth"):
-        print("Inside vpn_auth")
+
+        # Set the bitcoin network (regtest) for bitcoin rpc interaction
+        SelectParams(BITCOIN_NETWORK)
+        # Init proxy for rpc call to the bitcoin server
+        proxy = Proxy()
+
+        try:
+            # Unload Bitcoin wallet of the user
+            proxy.call("unloadwallet", USER_WALLET_NAME)
+            #print(f"Wallet loaded: successfully")
+        except JSONRPCError as e: 
+            # Don't throw an error is the wallet is already loaded
+            if e.error["code"] == WALLET_ALREADY_UNLOADED_ERROR_CODE: 
+                print("User wallet unloaded successfully")
+            else:
+                print("Unloading user wallet failed")
+                print(e)
+
+        try:
+            # Load Bitcoin wallet of the VPN
+            proxy.call("loadwallet", VPN_WALLET_NAME)
+            #print(f"Wallet loaded: successfully")
+        except JSONRPCError as e: 
+            # Don't throw an error is the wallet is already loaded
+            if e.error["code"] == WALLET_ALREADY_LOADED_ERROR_CODE: 
+                print("VPN wallet loaded successfully")
+            else:
+                print("Loading VPN wallet failed")
+                print(e)
+
+        try:
+            # Get a new bitcoin address where the vpn's user can pay
+            to_pay_btc_address = proxy.getnewaddress()
+        except JSONRPCError as e:
+            print("Retrieving new address failed.")
+            print(e)
+
+        try:
+            # Get all transaction ids
+            transaction_ids = scan_transactions(proxy)
+        except JSONRPCError as e:
+            print("Scanning transaction failed")
+            print(e)
+
+        sender_pub_keys = []
+        # Extract sender's public keys
+        for tx_id in transaction_ids:
+            pub_key = get_public_key(proxy, tx_id)
+            sender_pub_keys.append(pub_key)
 
         # If no challenge response is provided, issue a challenge
         if "static_response" not in authcred:
