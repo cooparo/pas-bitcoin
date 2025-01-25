@@ -38,13 +38,22 @@ def post_auth(authcred, attributes, authret, info):
         #print(f"Wallet loaded: successfully")
     except JSONRPCError as e: 
         # Don't throw an error is the wallet is already loaded
-        if e.error["code"] != WALLET_ALREADY_LOADED_ERROR_CODE: 
-            raise e
+        if e.error["code"] == WALLET_ALREADY_LOADED_ERROR_CODE: 
+            print("Wallet loaded successfully")
+        else:
+            print("Loading VPN wallet failed")
 
-    # Get a new bitcoin address where the vpn's user can pay
-    to_pay_btc_address = proxy.getnewaddress()
-    # Get all transaction ids
-    transaction_ids = scan_transactions(proxy)
+    try:
+        # Get a new bitcoin address where the vpn's user can pay
+        to_pay_btc_address = proxy.getnewaddress()
+    except JSONRPCError as e:
+        print("Retrieving new address failed")
+
+    try:
+        # Get all transaction ids
+        transaction_ids = scan_transactions(proxy)
+    except JSONRPCError as e:
+        print("Scanning transaction failed")
 
     sender_pub_keys = []
     # Extract sender's public keys
@@ -80,8 +89,11 @@ def scan_transactions(proxy):
     """Scan for all transactions in a wallet and return a list of tx's IDs"""
 
     tx_ids = []
-    transaction_list = proxy.call("listtransactions")
-    # print(f"raw_transaction_list:\n{raw_transaction_list}")
+
+    try:
+        transaction_list = proxy.call("listtransactions")
+    except JSONRPCError as e:
+        raise e
 
     # Extract transaction's ids
     for tx in transaction_list:
