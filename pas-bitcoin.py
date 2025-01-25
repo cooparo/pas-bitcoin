@@ -9,7 +9,9 @@ from ecdsa import VerifyingKey, SECP256k1, BadSignatureError
 SIGN_MESSAGE = "Who is John Galt?"
 BITCOIN_NETWORK = "regtest"
 VPN_WALLET_NAME = "vpn"
+USER_WALLET_NAME = "user"
 WALLET_ALREADY_LOADED_ERROR_CODE = -35
+WALLET_ALREADY_UNLOADED_ERROR_CODE = -18
 
 AUTH_NULL = True
 RETAIN_PASSWORD = True
@@ -33,13 +35,25 @@ def post_auth(authcred, attributes, authret, info):
     proxy = Proxy()
 
     try:
+        # Unload Bitcoin wallet of the user
+        proxy.call("unloadwallet", USER_WALLET_NAME)
+        #print(f"Wallet loaded: successfully")
+    except JSONRPCError as e: 
+        # Don't throw an error is the wallet is already loaded
+        if e.error["code"] == WALLET_ALREADY_UNLOADED_ERROR_CODE: 
+            print("User wallet unloaded successfully")
+        else:
+            print("Unloading user wallet failed")
+            print(e)
+
+    try:
         # Load Bitcoin wallet of the VPN
         proxy.call("loadwallet", VPN_WALLET_NAME)
         #print(f"Wallet loaded: successfully")
     except JSONRPCError as e: 
         # Don't throw an error is the wallet is already loaded
         if e.error["code"] == WALLET_ALREADY_LOADED_ERROR_CODE: 
-            print("Wallet loaded successfully")
+            print("VPN wallet loaded successfully")
         else:
             print("Loading VPN wallet failed")
             print(e)
