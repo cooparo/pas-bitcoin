@@ -18,10 +18,6 @@ RETAIN_PASSWORD = True
 
 def post_auth(authcred, attributes, authret, info):
     
-    # Failure, no matching in signature-pubkey payment
-    authret["status"] = FAIL
-    authret["client_reason"] = ("No payment provided for this private key")   
-    
     # No authentication needed for admins
     if authcred["username"] == "openvpn": 
         authret["conn_group"] = "admins" # Assign user to VPN_USERS group
@@ -82,14 +78,28 @@ def post_auth(authcred, attributes, authret, info):
     # Check if this is a VPN authentication session
     if attributes.get("vpn_auth"):
         print("Inside vpn_auth")
-        # Validate the challenge response 
-        if "static_response" in authcred:
-            print("Inside static_response")
+
+        # If no challenge response is provided, issue a challenge
+        if "static_response" not in authcred:
+            print("Inside not static_response")
+            # Default failure, no signature provided
+            authret["status"] = FAIL
+            authret["reason"] = "Not payment yet or no matching signature."
+            authret["client_reason"] = (
+                f"Pay to: {to_pay_btc_address} and sign this message with your private key: {SIGN_MESSAGE}."
+            )   
+        else:
+            # Validate the challenge response 
+            print("Else")
             signature = authcred["static_response"]
             print(f"Received signature: {signature}")
 
             print(f"Scanned pub keys: {sender_pub_keys}")
             # For each incoming payment, check sender pub key with the signature
+            authret["status"] = FAIL
+            authret["reason"] = "User has no valid signature or payment done"  
+            authret["client_reason"] = "No valid signature or did not payed"
+
             for pub_key in sender_pub_keys:
                 if verify_signature(SIGN_MESSAGE, signature, pub_key):
                     authret["status"] = SUCCEED
@@ -97,14 +107,6 @@ def post_auth(authcred, attributes, authret, info):
                     authret["reason"] = "User has valid signature"  
                     authret["client_reason"] = "Valid signature."
                     break
-        else:
-            print("Else")
-            # Default failure, no signature provided
-            authret["status"] = FAIL
-            authret["reason"] = "Not payment yet or no matching signature."
-            authret["client_reason"] = (
-                f"Pay to: {to_pay_btc_address} and sign this message with your private key: {SIGN_MESSAGE}."
-            )   
 
     return authret
 
