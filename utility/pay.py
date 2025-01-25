@@ -1,11 +1,14 @@
 from bitcoin.rpc import Proxy, JSONRPCError
 from bitcoin.core import lx
 from bitcoin import SelectParams
+import sys
 
 BITCOIN_NETWORK = "regtest"
 
-VPN_WALLET_NAME = "vpn"
-USER_WALLET_NAME = "user"
+VPN_WALLET_NAME = "vpn-wallet"
+USER_WALLET_NAME = "user-wallet"
+WALLET_ALREADY_LOADED_ERROR_CODE = -35
+WALLET_ALREADY_UNLOADED_ERROR_CODE = -18
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -24,17 +27,37 @@ if __name__ == "__main__":
     try:
         # Unload Bitcoin wallet of the VPN
         proxy.call("unloadwallet", VPN_WALLET_NAME)
+    except JSONRPCError as e: 
+        # Don't throw an error is the wallet is already unloaded
+        if e.error["code"] != WALLET_ALREADY_UNLOADED_ERROR_CODE: 
+            print("Unloading VPN wallet failed.")
+            raise e
+
+    try:
         # Load Bitcoin wallet of the user
         proxy.call("loadwallet", USER_WALLET_NAME)
-
     except JSONRPCError as e: 
         # Don't throw an error is the wallet is already loaded
         if e.error["code"] != WALLET_ALREADY_LOADED_ERROR_CODE: 
-            print("Loading VPN wallet failed")
-        else: raise e
+            print("Loading USER wallet failed.")
+            raise e
+
+    print("Wallet successfully loaded.")
 
     try:
-        txid = proxy.sendtoaddress(bitcoin_address, amount)
+        txid = proxy.call(
+            "sendtoaddress",
+            bitcoin_address, # address
+            amount, # amount
+            "", # comment
+            "", # comment_to
+            False, # subtractfeefromamount
+            False, # replaceable
+            6, # conf_target
+            "conservative", # estimate_mode
+            False, # avoid_reuse
+            # 1.0 # fee_rate
+        )
     except JSONRPCError as e:
         print("Payment failed.")
         raise e
