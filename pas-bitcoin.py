@@ -8,6 +8,7 @@ from ecdsa import VerifyingKey, SECP256k1, BadSignatureError
 
 SIGN_MESSAGE = "Who is John Galt?"
 BITCOIN_NETWORK = "regtest"
+VPN_WALLET_NAME = ""
 WALLET_ALREADY_LOADED_ERROR_CODE = -35
 
 AUTH_NULL = True
@@ -31,19 +32,17 @@ def post_auth(authcred, attributes, authret, info):
     # Init proxy for rpc call to the bitcoin server
     proxy = Proxy()
 
-    # Get a new bitcoin address where the vpn's user can pay
-    to_pay_btc_address = proxy.getnewaddress()
-
-    # Load Bitcoin wallet of the VPN
     try:
-        proxy.call("loadwallet", "vpn")
+        # Load Bitcoin wallet of the VPN
+        proxy.call("loadwallet", VPN_WALLET_NAME)
         #print(f"Wallet loaded: successfully")
     except JSONRPCError as e: 
-
         # Don't throw an error is the wallet is already loaded
         if e.error["code"] != WALLET_ALREADY_LOADED_ERROR_CODE: 
             raise e
 
+    # Get a new bitcoin address where the vpn's user can pay
+    to_pay_btc_address = proxy.getnewaddress()
     # Get all transaction ids
     transaction_ids = scan_transactions(proxy)
 
