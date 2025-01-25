@@ -42,18 +42,21 @@ def post_auth(authcred, attributes, authret, info):
             print("Wallet loaded successfully")
         else:
             print("Loading VPN wallet failed")
+            print(e)
 
     try:
         # Get a new bitcoin address where the vpn's user can pay
         to_pay_btc_address = proxy.getnewaddress()
     except JSONRPCError as e:
-        print("Retrieving new address failed")
+        print("Retrieving new address failed.")
+        print(e)
 
     try:
         # Get all transaction ids
         transaction_ids = scan_transactions(proxy)
     except JSONRPCError as e:
         print("Scanning transaction failed")
+        print(e)
 
     sender_pub_keys = []
     # Extract sender's public keys
