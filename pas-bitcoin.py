@@ -8,7 +8,7 @@ from ecdsa import VerifyingKey, SECP256k1, BadSignatureError
 
 SIGN_MESSAGE = "Who is John Galt?"
 BITCOIN_NETWORK = "regtest"
-VPN_WALLET_NAME = ""
+VPN_WALLET_NAME = "vpn"
 WALLET_ALREADY_LOADED_ERROR_CODE = -35
 
 AUTH_NULL = True
