@@ -23,10 +23,11 @@ def post_auth(authcred, attributes, authret, info):
     authret["client_reason"] = ("No payment provided for this private key")   
     
     # No authentication needed for admins
-    if authcred['username'] == 'openvpn': 
-        authret['conn_group'] = 'admins' # Assign user to VPN_USERS group
+    if authcred["username"] == "openvpn": 
+        authret["conn_group"] = "admins" # Assign user to VPN_USERS group
         authret["client_reason"] = ("You are an admin")
-        authret['status'] = SUCCEED
+        authret["reason"] = "Admin has access"
+        authret["status"] = SUCCEED
         return authret
 
     # Set the bitcoin network (regtest) for bitcoin rpc interaction
@@ -80,8 +81,10 @@ def post_auth(authcred, attributes, authret, info):
 
     # Check if this is a VPN authentication session
     if attributes.get("vpn_auth"):
+        print("Inside vpn_auth")
         # Validate the challenge response 
         if "static_response" in authcred:
+            print("Inside static_response")
             signature = authcred["static_response"]
             print(f"Received signature: {signature}")
 
@@ -90,13 +93,17 @@ def post_auth(authcred, attributes, authret, info):
             for pub_key in sender_pub_keys:
                 if verify_signature(SIGN_MESSAGE, signature, pub_key):
                     authret["status"] = SUCCEED
-                    authret['conn_group'] = 'users'  
+                    authret["conn_group"] = "users"  
+                    authret["reason"] = "User has valid signature"  
                     authret["client_reason"] = "Valid signature."
+                    break
         else:
+            print("Else")
             # Default failure, no signature provided
             authret["status"] = FAIL
+            authret["reason"] = "Not payment yet or no matching signature."
             authret["client_reason"] = (
-                f"Pay to: {to_pay_btc_address} and sign this message with your private key: {SIGN_MESSAGE}"
+                f"Pay to: {to_pay_btc_address} and sign this message with your private key: {SIGN_MESSAGE}."
             )   
 
     return authret
@@ -170,7 +177,7 @@ def get_public_key(proxy, transaction_id):
         return pub_key.hex()
 
     except JSONRPCError as e:
-        print(f"RPC Error: {e.error['message']}")
+        print(f"RPC Error: {e.error["message"]}")
         raise e
     except Exception as e:
         print(f"Error: {str(e)}")
