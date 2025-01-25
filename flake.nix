@@ -19,6 +19,7 @@
             p: with p; [
               ecdsa
               bitcoinlib
+              base58
             ]
           ))
         ];
