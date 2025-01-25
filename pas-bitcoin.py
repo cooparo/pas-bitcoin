@@ -8,6 +8,7 @@ from ecdsa import VerifyingKey, SECP256k1, BadSignatureError
 
 SIGN_MESSAGE = "Who is John Galt?"
 BITCOIN_NETWORK = "regtest"
+WALLET_ALREADY_LOADED_ERROR_CODE = -35
 
 AUTH_NULL = True
 RETAIN_PASSWORD = True
@@ -30,14 +31,17 @@ def post_auth(authcred, attributes, authret, info):
     # Init proxy for rpc call to the bitcoin server
     proxy = Proxy()
 
+    # Get a new bitcoin address where the vpn's user can pay
     to_pay_btc_address = proxy.getnewaddress()
 
-    # Load Bitcoin wallet
+    # Load Bitcoin wallet of the VPN
     try:
         proxy.call("loadwallet", "vpn")
         #print(f"Wallet loaded: successfully")
-    except JSONRPCError as e:
-        if e.error["code"] != -35:
+    except JSONRPCError as e: 
+
+        # Don't throw an error is the wallet is already loaded
+        if e.error["code"] != WALLET_ALREADY_LOADED_ERROR_CODE: 
             raise e
 
     # Get all transaction ids
@@ -51,7 +55,7 @@ def post_auth(authcred, attributes, authret, info):
 
     # Check if this is a VPN authentication session
     if attributes.get("vpn_auth"):
-        # Validate the challenge response (implement custom logic here)
+        # Validate the challenge response 
         if "static_response" in authcred:
             signature = authcred["static_response"]
             print(f"Received signature: {signature}")
@@ -145,20 +149,6 @@ def get_public_key(proxy, transaction_id):
         raise e
 
 
-# NOTE: This way of hashing the message is needed for compatibility
-# with all that signature bitcoin related tools (bx, bitcoin core)
-def bitcoin_message_hash(message: str) -> bytes:
-    """
-    Hash the message with the Bitcoin Signed Message prefix.
-    """
-    prefix = (
-        b"\x18Bitcoin Signed Message:\n"  # called Magic Prefix (or strMessageMagic)
-    )
-    message_bytes = message.encode()
-    length = len(message_bytes).to_bytes(1, byteorder="big")
-    return sha256(sha256(prefix + length + message_bytes).digest()).digest()
-
-
 def verify_signature(message: str, signature: str, public_key: str) -> bool:
     """
     Verifies if the signed message was signed by the owner of the
@@ -167,29 +157,28 @@ def verify_signature(message: str, signature: str, public_key: str) -> bool:
     Args:
         message (str): The original message.
         signature (str): The signed message (base64 encoded).
-        public_key (str): Compressed public key (hex encoded).
+        public_key (str): Public key (hex encoded).
 
     Returns:
         bool: True if the signer owns the public key, False otherwise.
     """
+
     try:
-        # Decode the signature from base64 and remove the
-        # recovery ID (first byes)
-        decoded_signature = base64.b64decode(signature)[1:]
+        # Decode the signature from base64
+        signature_bytes = base64.b64decode(signature)
 
-        # Decode the public key
-        decoded_pub_key = bytes.fromhex(public_key)
+        # Decode the public key from hex
+        public_key_bytes = bytes.fromhex(public_key)
 
-        # Hash the message with the Bitcoin Signed Message prefix
-        hashed_message = bitcoin_message_hash(message)
+        # Convert to bytes
+        data = message.encode()
 
         # Convert the public key to a VerifyingKey object
-        verifying_key = VerifyingKey.from_string(decoded_pub_key, curve=SECP256k1)
+        verifying_key = VerifyingKey.from_string(public_key_bytes, curve=SECP256k1, hashfunc=sha256)
+        return verifying_key.verify(signature_bytes, data, hashfunc=sha256)
 
-        return verifying_key.verify_digest(decoded_signature, hashed_message)
-
-    except (BadSignatureError, ValueError):
-        return False  # Signature verification failed
-    except Exception as e:
-        print(f"Error processing public key {public_key}: {e}")
-        raise e
+    except BadSignatureError as e:
+        # print(f"BadSignatureError:\n{e}")
+        return False
+    except BadDigestError as e:
+        print(f"BadDigestError:\n{e}")
