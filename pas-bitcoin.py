@@ -75,7 +75,7 @@ def post_auth(authcred, attributes, authret, info):
             print("Inside not static_response")
             # Default failure, no signature provided
             authret["status"] = FAIL
-            authret["reason"] = "Not payment yet or no matching signature."
+            authret["reason"] = "No static_response given."
             authret["client_reason"] = (
                 f"Pay to: {to_pay_btc_address} and sign this message with your private key: {SIGN_MESSAGE}."
             )   
@@ -95,8 +95,6 @@ def post_auth(authcred, attributes, authret, info):
                 if verify_signature(SIGN_MESSAGE, signature, pub_key):
                     authret["status"] = SUCCEED
                     authret["conn_group"] = "users"  
-                    authret["reason"] = "User has valid signature"  
-                    authret["client_reason"] = "Valid signature."
                     break
 
     return authret
