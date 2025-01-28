@@ -16,10 +16,31 @@ WALLET_ALREADY_UNLOADED_ERROR_CODE = -18
 AUTH_NULL = True
 RETAIN_PASSWORD = True
 
-def post_auth(authcred, attributes, authret, info):
+def post_auth_cr(authcred, attributes, authret, info, crstate):
+
+    # Debugging purpose
+    print("**********************************************")
+    print("AUTHCRED", authcred)
+    print("ATTRIBUTES", attributes)
+    print("AUTHRET", authret)
+    print("INFO", info)
+    print("**********************************************")
+
+    # Don't do challenge/response on sessions or autologin clients.
+    # autologin client: a client that has been issued a special
+    #   certificate allowing authentication with only a certificate
+    #   (used for unattended clients such as servers).
+    # session: a client that has already authenticated and received
+    #   a session token.  The client is attempting to authenticate
+    #   again using the session token.
+    if info.get("auth_method") in ("session", "autologin"):
+        return authret
 
     # Check if this is a VPN authentication session
     if attributes.get("vpn_auth"):
+
+        # Get the dynamic response
+        signature = crstate.response()
 
         # Set the bitcoin network (regtest) for bitcoin rpc interaction
         SelectParams(BITCOIN_NETWORK)
@@ -71,31 +92,31 @@ def post_auth(authcred, attributes, authret, info):
             sender_pub_keys.append(pub_key)
 
         # If no challenge response is provided, issue a challenge
-        if "static_response" not in authcred:
-            print("Inside not static_response")
-            # Default failure, no signature provided
-            authret["status"] = FAIL
-            authret["reason"] = "No static_response given."
-            authret["client_reason"] = (
-                f"Pay to: {to_pay_btc_address} and sign this message with your private key: {SIGN_MESSAGE}."
-            )   
-        else:
-            # Validate the challenge response 
-            print("Else")
-            signature = authcred["static_response"]
-            print(f"Received signature: {signature}")
+        if signature:
+            # received response
+            print(f"Signature received: {signature}")
+            crstate.expire()
 
-            print(f"Scanned pub keys: {sender_pub_keys}")
-            # For each incoming payment, check sender pub key with the signature
+            # Default fail
             authret["status"] = FAIL
-            authret["reason"] = "User has no valid signature or payment done"  
-            authret["client_reason"] = "No valid signature or did not payed"
+            authret["reason"] = "No matching signature"
+            authret["client_reason"] = authret["reason"]
 
+            # Verify matching signature with user's public key who paid
             for pub_key in sender_pub_keys:
                 if verify_signature(SIGN_MESSAGE, signature, pub_key):
                     authret["status"] = SUCCEED
                     authret["conn_group"] = "users"  
+                    authret["reason"] = "Signature matching successfull."
                     break
+        else:
+            # no signature provided
+            print("Else")
+
+            # Default failure, no signature provided
+            authret["status"] = FAIL
+            authret["reason"] = "No signature provided."
+            authret["client_reason"] = authret["reason"]
 
     return authret
 
