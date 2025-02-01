@@ -4,7 +4,7 @@ from bitcoin.core import lx
 from bitcoin import SelectParams
 import base64
 from hashlib import sha256
-from ecdsa import VerifyingKey, SECP256k1, BadSignatureError
+from ecdsa import VerifyingKey, SECP256k1, BadSignatureError, BadDigestError
 
 SIGN_MESSAGE = "Who is John Galt?"
 BITCOIN_NETWORK = "regtest"
