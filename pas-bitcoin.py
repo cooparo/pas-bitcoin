@@ -105,6 +105,7 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
             # Verify matching signature with user's public key who paid
             for pub_key in sender_pub_keys:
                 if verify_signature(SIGN_MESSAGE, signature, pub_key):
+                    print(f"Checking public key: {pub_key}")
                     authret["status"] = SUCCEED
                     authret["conn_group"] = "users"  
                     authret["reason"] = "Signature matching successfull."
