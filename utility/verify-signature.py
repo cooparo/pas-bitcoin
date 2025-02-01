@@ -4,7 +4,6 @@ from hashlib import sha256
 from ecdsa import BadSignatureError, BadDigestError, VerifyingKey, SECP256k1
 
 
-# TODO: check if works with all types of pub key: compressed (0x02, 0x03) and uncompressed
 def verify_signature(message: str, signature: str, public_key: str) -> bool:
     """
     Verifies if the signed message was signed by the owner of the
