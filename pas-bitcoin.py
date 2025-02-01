@@ -39,8 +39,8 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
     # Check if this is a VPN authentication session
     if attributes.get("vpn_auth"):
 
+        signature = authcred.get('static_response')
         # Get the dynamic response
-        signature = crstate.response()
 
         # Set the bitcoin network (regtest) for bitcoin rpc interaction
         SelectParams(BITCOIN_NETWORK)
@@ -95,7 +95,7 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
         if signature:
             # received response
             print(f"Signature received: {signature}")
-            crstate.expire()
+            # crstate.expire()
 
             # Default fail
             authret["status"] = FAIL
