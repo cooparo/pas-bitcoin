@@ -85,12 +85,13 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
             print("Scanning transaction failed")
             print(e)
 
-        sender_pub_keys = []
+        sender_pub_keys = set()
         # Extract sender's public keys
         for tx_id in transaction_ids:
             pub_key = get_public_key(proxy, tx_id)
-            sender_pub_keys.append(pub_key)
+            sender_pub_keys.add(pub_key)
 
+        print(f"Sender pub key: {sender_pub_keys}")
         # If no challenge response is provided, issue a challenge
         if signature:
             # received response
@@ -104,8 +105,8 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
 
             # Verify matching signature with user's public key who paid
             for pub_key in sender_pub_keys:
+                print(f"Checking public key: {pub_key}")
                 if verify_signature(SIGN_MESSAGE, signature, pub_key):
-                    print(f"Checking public key: {pub_key}")
                     authret["status"] = SUCCEED
                     authret["conn_group"] = "users"  
                     authret["reason"] = "Signature matching successfull."
@@ -125,7 +126,7 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
 def scan_transactions(proxy):
     """Scan for all transactions in a wallet and return a list of tx's IDs"""
 
-    tx_ids = []
+    tx_ids = set()
 
     try:
         transaction_list = proxy.call("listtransactions")
@@ -134,7 +135,7 @@ def scan_transactions(proxy):
 
     # Extract transaction's ids
     for tx in transaction_list:
-        tx_ids.append(tx["txid"])
+        tx_ids.add(tx["txid"])
 
     return tx_ids
 
