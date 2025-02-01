@@ -155,6 +155,5 @@ if __name__ == "__main__":
     address = ec_to_address(ec_pub_key)
     # print(f"Address: {address}")
 
-    # Automating private key dumping to sign faster
     priv_key = proxy.dumpprivkey(address)
     print(f"Private key: {priv_key}")
