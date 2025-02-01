@@ -116,7 +116,7 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
             # Default failure, no signature provided
             authret["status"] = FAIL
             authret["reason"] = "No signature provided."
-            authret["client_reason"] = authret["reason"]
+            authret["client_reason"] = f"Pay at ${to_pay_btc_address} and sign this message: Who is John Galt?"
 
     return authret
 
