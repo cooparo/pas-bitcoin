@@ -15,6 +15,8 @@
           bitcoin
           libbitcoin-explorer
 
+          openvpn
+
           (python312.withPackages (
             p: with p; [
               ecdsa
