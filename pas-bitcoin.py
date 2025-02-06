@@ -1,10 +1,11 @@
-from pyovpn.plugin import *
-from bitcoin.rpc import Proxy, JSONRPCError
-from bitcoin.core import lx
-from bitcoin import SelectParams
 import base64
 from hashlib import sha256
-from ecdsa import VerifyingKey, SECP256k1, BadSignatureError, BadDigestError
+
+from bitcoin import SelectParams
+from bitcoin.core import lx
+from bitcoin.rpc import JSONRPCError, Proxy
+from ecdsa import BadDigestError, BadSignatureError, SECP256k1, VerifyingKey
+from pyovpn.plugin import *
 
 SIGN_MESSAGE = "Who is John Galt?"
 BITCOIN_NETWORK = "regtest"
@@ -16,8 +17,8 @@ WALLET_ALREADY_UNLOADED_ERROR_CODE = -18
 AUTH_NULL = True
 RETAIN_PASSWORD = True
 
-def post_auth_cr(authcred, attributes, authret, info, crstate):
 
+def post_auth_cr(authcred, attributes, authret, info, crstate):
     # Debugging purpose
     print("**********************************************")
     print("AUTHCRED", authcred)
@@ -38,8 +39,7 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
 
     # Check if this is a VPN authentication session
     if attributes.get("vpn_auth"):
-
-        signature = authcred.get('static_response')
+        signature = authcred.get("static_response")
         # Get the dynamic response
 
         # Set the bitcoin network (regtest) for bitcoin rpc interaction
@@ -50,10 +50,10 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
         try:
             # Unload Bitcoin wallet of the user
             proxy.call("unloadwallet", USER_WALLET_NAME)
-            #print(f"Wallet loaded: successfully")
-        except JSONRPCError as e: 
+            # print(f"Wallet loaded: successfully")
+        except JSONRPCError as e:
             # Don't throw an error is the wallet is already loaded
-            if e.error["code"] == WALLET_ALREADY_UNLOADED_ERROR_CODE: 
+            if e.error["code"] == WALLET_ALREADY_UNLOADED_ERROR_CODE:
                 print("User wallet unloaded successfully")
             else:
                 print("Unloading user wallet failed")
@@ -62,10 +62,10 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
         try:
             # Load Bitcoin wallet of the VPN
             proxy.call("loadwallet", VPN_WALLET_NAME)
-            #print(f"Wallet loaded: successfully")
-        except JSONRPCError as e: 
+            # print(f"Wallet loaded: successfully")
+        except JSONRPCError as e:
             # Don't throw an error is the wallet is already loaded
-            if e.error["code"] == WALLET_ALREADY_LOADED_ERROR_CODE: 
+            if e.error["code"] == WALLET_ALREADY_LOADED_ERROR_CODE:
                 print("VPN wallet loaded successfully")
             else:
                 print("Loading VPN wallet failed")
@@ -108,7 +108,7 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
                 print(f"Checking public key: {pub_key}")
                 if verify_signature(SIGN_MESSAGE, signature, pub_key):
                     authret["status"] = SUCCEED
-                    authret["conn_group"] = "users"  
+                    authret["conn_group"] = "users"
                     authret["reason"] = "Signature matching successfull."
                     break
         else:
@@ -118,7 +118,9 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
             # Default failure, no signature provided
             authret["status"] = FAIL
             authret["reason"] = "No signature provided."
-            authret["client_reason"] = f"Pay at {to_pay_btc_address} and sign this message: Who is John Galt?"
+            authret["client_reason"] = (
+                f"Pay at {to_pay_btc_address} and sign this message: Who is John Galt?"
+            )
 
     return authret
 
@@ -191,7 +193,7 @@ def get_public_key(proxy, transaction_id):
         return pub_key.hex()
 
     except JSONRPCError as e:
-        print(f"RPC Error: {e.error["message"]}")
+        print(f"RPC Error: {e.error['message']}")
         raise e
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -223,7 +225,9 @@ def verify_signature(message: str, signature: str, public_key: str) -> bool:
         data = message.encode()
 
         # Convert the public key to a VerifyingKey object
-        verifying_key = VerifyingKey.from_string(public_key_bytes, curve=SECP256k1, hashfunc=sha256)
+        verifying_key = VerifyingKey.from_string(
+            public_key_bytes, curve=SECP256k1, hashfunc=sha256
+        )
         return verifying_key.verify(signature_bytes, data, hashfunc=sha256)
 
     except BadSignatureError as e:
