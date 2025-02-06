@@ -89,7 +89,8 @@ def post_auth_cr(authcred, attributes, authret, info, crstate):
         # Extract sender's public keys
         for tx_id in transaction_ids:
             pub_key = get_public_key(proxy, tx_id)
-            sender_pub_keys.add(pub_key)
+            if pub_key != 0x0 and pub_key != "0x0": # ignora le transazioni delle coinbase che non hanno pub_key
+                sender_pub_keys.add(pub_key)
 
         print(f"Sender pub key: {sender_pub_keys}")
         # If no challenge response is provided, issue a challenge
@@ -190,7 +191,17 @@ def get_public_key(proxy, transaction_id):
         # The public key is typically the second item in the scriptSig
         pub_key = decoded_script[1]
 
-        return pub_key.hex()
+
+        if isinstance(pub_key, bytes):
+            print("La variabile è di tipo bytes.")
+            result = pub_key.hex()  # Converte bytes in hex
+            print(f"Hex: {result}")
+        elif isinstance(pub_key, int):
+            print("La variabile è di tipo int.")
+            result = hex(pub_key)  # Converte int in hex
+            print(f"Hex: {result}")
+
+        return result
 
     except JSONRPCError as e:
         print(f"RPC Error: {e.error['message']}")
